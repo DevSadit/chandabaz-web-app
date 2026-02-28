@@ -9,6 +9,31 @@ const getMediaType = (mimetype) => {
   return 'image';
 };
 
+const normalizeMedia = (files = []) => (
+  (files || [])
+    .map((file) => {
+      const fileUrl = file.path || file.secure_url || file.url;
+      const publicId = file.filename || file.public_id;
+      const type =
+        file.resource_type === 'video'
+          ? 'video'
+          : file.resource_type === 'raw'
+            ? 'pdf'
+            : getMediaType(file.mimetype);
+
+      if (!fileUrl) return null;
+
+      return {
+        url: fileUrl,
+        publicId,
+        type,
+        filename: file.originalname || file.display_name || publicId,
+        size: file.size || file.bytes,
+      };
+    })
+    .filter(Boolean)
+);
+
 // @desc    Create a new post
 // @route   POST /api/posts
 // @access  Private
@@ -21,28 +46,7 @@ exports.createPost = async (req, res, next) => {
     }
 
     // Process uploaded files from multer/cloudinary and normalize field names.
-    const media = (req.files || [])
-      .map((file) => {
-        const fileUrl = file.path || file.secure_url || file.url;
-        const publicId = file.filename || file.public_id;
-        const type =
-          file.resource_type === 'video'
-            ? 'video'
-            : file.resource_type === 'raw'
-              ? 'pdf'
-              : getMediaType(file.mimetype);
-
-        if (!fileUrl) return null;
-
-        return {
-          url: fileUrl,
-          publicId,
-          type,
-          filename: file.originalname || file.display_name || publicId,
-          size: file.size || file.bytes,
-        };
-      })
-      .filter(Boolean);
+    const media = normalizeMedia(req.files);
 
     // If files were uploaded but none produced valid URLs, fail with a clear message.
     if ((req.files || []).length > 0 && media.length === 0) {
@@ -58,7 +62,11 @@ exports.createPost = async (req, res, next) => {
       location,
       incidentDate: new Date(incidentDate),
       isAnonymous: isAnonymous === 'true' || isAnonymous === true,
-      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim())) : [],
+      tags: tags
+        ? (Array.isArray(tags) ? tags : tags.split(','))
+          .map((t) => t.trim())
+          .filter(Boolean)
+        : [],
       media,
       author: req.user._id,
       status: 'pending',
@@ -208,6 +216,93 @@ exports.getMyPosts = async (req, res, next) => {
       data: posts,
       pagination: { total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get a single post for the owner/admin (any status)
+// @route   GET /api/posts/:id/owner
+// @access  Private
+exports.getMyPost = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id).populate('author', 'name avatar').lean();
+
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    const isOwner = post.author?._id?.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this post' });
+    }
+
+    res.json({ success: true, data: post });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update a rejected post (resubmits for review)
+// @route   PUT /api/posts/:id
+// @access  Private
+exports.updatePost = async (req, res, next) => {
+  try {
+    const { title, description, location, incidentDate, isAnonymous, tags } = req.body;
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    const isOwner = post.author.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this post' });
+    }
+
+    if (post.status !== 'rejected' && !isAdmin) {
+      return res.status(409).json({ success: false, message: 'Only rejected posts can be updated' });
+    }
+
+    if (!title || !description || !location || !incidentDate) {
+      return res.status(400).json({ success: false, message: 'Title, description, location, and date are required' });
+    }
+
+    const media = normalizeMedia(req.files);
+
+    if ((req.files || []).length > 0 && media.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Uploaded files were received but no valid media URL was returned by storage.',
+      });
+    }
+
+    post.title = title.trim();
+    post.description = description.trim();
+    post.location = location.trim();
+    post.incidentDate = new Date(incidentDate);
+    post.isAnonymous = isAnonymous === 'true' || isAnonymous === true;
+    post.tags = tags
+      ? (Array.isArray(tags) ? tags : tags.split(','))
+        .map((t) => t.trim())
+        .filter(Boolean)
+      : [];
+    if ((req.files || []).length > 0) {
+      post.media = media;
+    }
+    post.status = 'pending';
+    post.rejectionReason = null;
+    post.approvedAt = null;
+    post.approvedBy = null;
+
+    await post.save();
+    await post.populate('author', 'name avatar');
+
+    res.json({ success: true, message: 'Post updated and resubmitted for review', data: post });
   } catch (error) {
     next(error);
   }

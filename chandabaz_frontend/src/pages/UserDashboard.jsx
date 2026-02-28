@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 
 function StatCard({ icon: Icon, label, value, tone }) {
@@ -29,16 +30,7 @@ function StatCard({ icon: Icon, label, value, tone }) {
   );
 }
 
-function MyPostRow({ post, onDelete }) {
-  const [busy, setBusy] = useState(false);
-
-  const handleDelete = async () => {
-    if (!confirm('Delete this report? This action cannot be undone.')) return;
-    setBusy(true);
-    await onDelete();
-    setBusy(false);
-  };
-
+function MyPostRow({ post, onDeleteRequest }) {
   return (
     <div className="bg-white rounded-xl border border-neutral-200 p-4 flex flex-col sm:flex-row sm:items-start gap-4 hover:shadow-sm transition-shadow">
       <div className="w-full sm:w-20 h-20 bg-neutral-100 rounded-xl overflow-hidden flex-shrink-0">
@@ -82,7 +74,7 @@ function MyPostRow({ post, onDelete }) {
 
         {post.status === 'rejected' && post.rejectionReason && (
           <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">
-            Rejection reason: {post.rejectionReason}
+            Admin feedback: {post.rejectionReason}
           </div>
         )}
 
@@ -101,12 +93,20 @@ function MyPostRow({ post, onDelete }) {
             </span>
           )}
 
+          {post.status === 'rejected' && (
+            <Link
+              to={`/post/${post._id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              <Edit3 size={12} /> Edit & Resubmit
+            </Link>
+          )}
+
           <button
-            onClick={handleDelete}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+            onClick={() => onDeleteRequest(post)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
           >
-            {busy ? <LoadingSpinner size="sm" /> : <Trash2 size={12} />}
+            <Trash2 size={12} />
             Delete
           </button>
         </div>
@@ -124,6 +124,8 @@ export default function UserDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(null);
+  const [deletebusy, setDeleteBusy] = useState(false);
 
   useEffect(() => {
     if (user?.name) setName(user.name);
@@ -167,6 +169,14 @@ export default function UserDashboard() {
     } catch (_) {
       toast.error('Failed to delete post');
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPost) return;
+    setDeleteBusy(true);
+    await handleDelete(deletingPost._id);
+    setDeleteBusy(false);
+    setDeletingPost(null);
   };
 
   const handleNameSave = async (e) => {
@@ -303,7 +313,7 @@ export default function UserDashboard() {
                     <MyPostRow
                       key={post._id}
                       post={post}
-                      onDelete={() => handleDelete(post._id)}
+                      onDeleteRequest={setDeletingPost}
                     />
                   ))}
                 </div>
@@ -312,6 +322,17 @@ export default function UserDashboard() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deletingPost}
+        variant="delete"
+        title="Delete this report?"
+        description="Are you sure you want to permanently delete this report? This cannot be undone."
+        postTitle={deletingPost?.title}
+        busy={deletebusy}
+        onConfirm={confirmDelete}
+        onClose={() => !deletebusy && setDeletingPost(null)}
+      />
     </div>
   );
 }

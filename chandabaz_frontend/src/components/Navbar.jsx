@@ -9,6 +9,7 @@ import {
   Plus,
   LayoutDashboard,
   ChevronDown,
+  Flame,
 } from "lucide-react";
 
 const navCss = `
@@ -78,9 +79,13 @@ const navCss = `
     padding: 6px 14px; border-radius: 2px;
     border-bottom: 2px solid transparent;
     transition: color 0.2s, border-color 0.2s, background 0.2s;
+    display: inline-flex; align-items: center; gap: 5px;
   }
   .nb-navlink:hover { color: #0A0F0D; background: rgba(1,145,69,0.05); }
   .nb-navlink.active { color: #019145; border-bottom-color: #019145; }
+  .nb-navlink.heatmap-link { color: #9A8060; }
+  .nb-navlink.heatmap-link:hover { color: #C45A1A; background: rgba(249,115,22,0.06); }
+  .nb-navlink.heatmap-link.active { color: #EA580C; border-bottom-color: #EA580C; }
 
   /* ── Desktop actions ── */
   .nb-actions { display: flex; align-items: center; gap: 10px; }
@@ -222,6 +227,9 @@ const navCss = `
   .nb-m-link.green { color: #019145; background: rgba(1,145,69,0.06); border-color: rgba(1,145,69,0.18); }
   .nb-m-link.red { color: #DC2626; }
   .nb-m-link.red:hover { background: rgba(220,38,38,0.06); border-color: rgba(220,38,38,0.15); }
+  .nb-m-link.heat { color: #9A6630; }
+  .nb-m-link.heat:hover { background: rgba(249,115,22,0.07); color: #EA580C; border-color: rgba(249,115,22,0.20); }
+  .nb-m-link.heat.active { color: #EA580C; background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.22); }
   .nb-m-link-btn {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 12px; border-radius: 2px; width: 100%;
@@ -291,6 +299,15 @@ export default function Navbar() {
               }
             >
               Browse Reports
+            </NavLink>
+            <NavLink
+              to="/heatmap"
+              className={({ isActive }) =>
+                `nb-navlink heatmap-link${isActive ? " active" : ""}`
+              }
+            >
+              <Flame size={12} />
+              Heatmap
             </NavLink>
             {isLoggedIn && (
               <NavLink
@@ -406,6 +423,15 @@ export default function Navbar() {
               }
             >
               Browse Reports
+            </NavLink>
+            <NavLink
+              to="/heatmap"
+              className={({ isActive }) =>
+                `nb-m-link heat${isActive ? " active" : ""}`
+              }
+            >
+              <Flame size={14} />
+              Heatmap
             </NavLink>
             {isLoggedIn && (
               <NavLink

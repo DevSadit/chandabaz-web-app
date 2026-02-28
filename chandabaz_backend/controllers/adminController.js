@@ -90,8 +90,12 @@ exports.rejectPost = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Rejection feedback is required' });
+    }
+
     post.status = 'rejected';
-    post.rejectionReason = reason || 'Content does not meet community guidelines';
+    post.rejectionReason = reason.trim();
     await post.save();
 
     res.json({ success: true, message: 'Post rejected', data: post });

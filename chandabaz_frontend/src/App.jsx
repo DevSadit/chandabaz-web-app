@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import Heatmap from './pages/Heatmap';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Submit from './pages/Submit';
@@ -37,6 +38,15 @@ const AppRoutes = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route
+            path="/post/:id/edit"
+            element={
+              <ProtectedRoute>
+                <Submit />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/heatmap" element={<Heatmap />} />
           <Route path="/post/:id" element={<PostDetail />} />
           <Route
             path="/submit"

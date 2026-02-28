@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, MapPin, Calendar, Tag, UserX, CheckCircle, AlertTriangle, FileText, Image, Film } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -14,10 +14,15 @@ const STEPS = [
 
 export default function Submit() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditing = Boolean(id);
   const [step, setStep] = useState(0);
   const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [loadingPost, setLoadingPost] = useState(false);
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [adminFeedback, setAdminFeedback] = useState('');
 
   const [form, setForm] = useState({
     title: '',
@@ -29,6 +34,39 @@ export default function Submit() {
   });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+
+  useEffect(() => {
+    const loadPost = async () => {
+      if (!isEditing) return;
+      setLoadingPost(true);
+      try {
+        const { data } = await api.get(`/posts/${id}/owner`);
+        const post = data.data;
+        if (post.status !== 'rejected') {
+          toast.error('Only rejected posts can be updated.');
+          navigate('/dashboard');
+          return;
+        }
+        setForm({
+          title: post.title || '',
+          description: post.description || '',
+          location: post.location || '',
+          incidentDate: post.incidentDate ? new Date(post.incidentDate).toISOString().split('T')[0] : '',
+          tags: Array.isArray(post.tags) ? post.tags.join(', ') : post.tags || '',
+          isAnonymous: post.isAnonymous || false,
+        });
+        setExistingMedia(post.media || []);
+        setAdminFeedback(post.rejectionReason || '');
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Failed to load the rejected post');
+        navigate('/dashboard');
+      } finally {
+        setLoadingPost(false);
+      }
+    };
+
+    loadPost();
+  }, [id, isEditing, navigate]);
 
   const validateStep = () => {
     if (step === 0) {
@@ -56,20 +94,39 @@ export default function Submit() {
       if (form.tags.trim()) formData.append('tags', form.tags);
       files.forEach((file) => formData.append('media', file));
 
-      await api.post('/posts', formData, {
+      const endpoint = isEditing ? `/posts/${id}` : '/posts';
+      const method = isEditing ? api.put : api.post;
+
+      await method(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => setProgress(Math.round((e.loaded * 100) / e.total)),
       });
 
-      toast.success('Report submitted! It will be reviewed within 24 hours.');
-      navigate('/');
+      toast.success(isEditing ? 'Update submitted for review.' : 'Report submitted! It will be reviewed within 24 hours.');
+      navigate(isEditing ? '/dashboard' : '/');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Submission failed. Please try again.');
+      toast.error(err.response?.data?.message || (isEditing ? 'Update failed. Please try again.' : 'Submission failed. Please try again.'));
     } finally {
       setSubmitting(false);
       setProgress(0);
     }
   };
+
+  const steps = isEditing
+    ? [
+      { label: 'Details', desc: 'Update incident information' },
+      { label: 'Media', desc: 'Update evidence' },
+      { label: 'Review', desc: 'Confirm & resubmit' },
+    ]
+    : STEPS;
+
+  if (loadingPost) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-neutral-50">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-neutral-50">
@@ -80,18 +137,28 @@ export default function Submit() {
             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
               <Upload size={15} className="text-white" />
             </div>
-            <h1 className="text-xl font-bold text-neutral-900">Submit Evidence</h1>
+            <h1 className="text-xl font-bold text-neutral-900">{isEditing ? 'Update Report' : 'Submit Evidence'}</h1>
           </div>
           <p className="text-sm text-neutral-500 ml-11">
-            Your submission will be reviewed by our team before going live.
+            {isEditing
+              ? 'Update your rejected report and resubmit it for review.'
+              : 'Your submission will be reviewed by our team before going live.'}
           </p>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
+        {isEditing && adminFeedback && (
+          <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-700">
+            <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+            <span>
+              <span className="font-semibold">Admin feedback:</span> {adminFeedback}
+            </span>
+          </div>
+        )}
         {/* Stepper */}
         <div className="flex items-center mb-8">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <div key={s.label} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${i < step
@@ -107,7 +174,7 @@ export default function Submit() {
                   <p className="text-[10px] text-neutral-400 hidden sm:block">{s.desc}</p>
                 </div>
               </div>
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-3 mb-5 transition-all ${i < step ? 'bg-primary-400' : 'bg-neutral-200'}`} />
               )}
             </div>
@@ -118,8 +185,8 @@ export default function Submit() {
         <div className="card shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
           {/* Step header */}
           <div className="px-7 py-5 border-b border-neutral-100 bg-neutral-50/60">
-            <h2 className="text-base font-semibold text-neutral-900">{STEPS[step].label}</h2>
-            <p className="text-xs text-neutral-500 mt-0.5">{STEPS[step].desc}</p>
+            <h2 className="text-base font-semibold text-neutral-900">{steps[step].label}</h2>
+            <p className="text-xs text-neutral-500 mt-0.5">{steps[step].desc}</p>
           </div>
 
           <div className="px-7 py-6">
@@ -225,6 +292,34 @@ export default function Submit() {
             {/* Step 1: Media */}
             {step === 1 && (
               <div className="animate-fade-in space-y-4">
+                {isEditing && existingMedia.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-neutral-700">Current attachments</p>
+                      <span className="text-[11px] text-neutral-400">Upload new files to replace</span>
+                    </div>
+                    <div className="space-y-2">
+                      {existingMedia.map((m, i) => {
+                        const Icon = m.type === 'video' ? Film : m.type === 'pdf' ? FileText : Image;
+                        return (
+                          <div key={`${m.url}-${i}`} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-white border border-neutral-200 overflow-hidden">
+                              {m.type === 'image' ? (
+                                <img src={m.url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Icon size={16} className="text-neutral-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-neutral-800 truncate">{m.filename || 'Attachment'}</p>
+                              <p className="text-xs text-neutral-400 capitalize">{m.type}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <DragDropUpload files={files} onChange={setFiles} />
                 {files.length === 0 && (
                   <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
@@ -285,7 +380,11 @@ export default function Submit() {
 
                 <div className="flex items-start gap-2.5 p-4 bg-primary-50 rounded-xl border border-primary-100 text-xs text-primary-700">
                   <CheckCircle size={14} className="mt-0.5 flex-shrink-0 text-primary-600" />
-                  <span>Your report will be reviewed by our team before it's made public. This usually takes less than 24 hours.</span>
+                  <span>
+                    {isEditing
+                      ? 'Your update will be reviewed again before it is made public.'
+                      : 'Your report will be reviewed by our team before it is made public. This usually takes less than 24 hours.'}
+                  </span>
                 </div>
               </div>
             )}
@@ -299,16 +398,16 @@ export default function Submit() {
               </button>
             ) : <div />}
 
-            {step < STEPS.length - 1 ? (
+            {step < steps.length - 1 ? (
               <button onClick={handleNext} className="btn-primary">
-                Continue <span className="text-xs opacity-70 ml-1">→ {STEPS[step + 1].label}</span>
+                Continue <span className="text-xs opacity-70 ml-1">→ {steps[step + 1].label}</span>
               </button>
             ) : (
               <button onClick={handleSubmit} disabled={submitting} className="btn-primary">
                 {submitting ? (
                   <><LoadingSpinner size="sm" />Submitting...</>
                 ) : (
-                  <><Upload size={15} />Submit Report</>
+                  <><Upload size={15} />{isEditing ? 'Resubmit Report' : 'Submit Report'}</>
                 )}
               </button>
             )}

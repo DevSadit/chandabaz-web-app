@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import {
   CheckCircle, XCircle, Trash2, Eye, Users, FileText,
   Clock, RefreshCw, MapPin, User, UserX, ShieldCheck,
@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { Dialog, Transition } from '@headlessui/react';
 
 function StatCard({ icon: Icon, label, value, bg, iconColor, trend }) {
   return (
@@ -30,7 +32,7 @@ function StatCard({ icon: Icon, label, value, bg, iconColor, trend }) {
   );
 }
 
-function PostRow({ post, onApprove, onReject, onDelete }) {
+function PostRow({ post, onApproveRequest, onReject, onDeleteRequest }) {
   const [loading, setLoading] = useState('');
 
   const act = async (key, fn) => {
@@ -103,7 +105,7 @@ function PostRow({ post, onApprove, onReject, onDelete }) {
 
           {post.status !== 'approved' && (
             <button
-              onClick={() => act('approve', onApprove)}
+              onClick={() => onApproveRequest(post)}
               disabled={loading === 'approve'}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors disabled:opacity-50"
             >
@@ -114,22 +116,17 @@ function PostRow({ post, onApprove, onReject, onDelete }) {
 
           {post.status !== 'rejected' && (
             <button
-              onClick={() => {
-                const reason = prompt('Rejection reason (optional):');
-                act('reject', () => onReject(reason));
-              }}
+              onClick={() => onReject(post)}
               disabled={loading === 'reject'}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
             >
-              {loading === 'reject' ? <LoadingSpinner size="sm" /> : <XCircle size={12} />}
+              <XCircle size={12} />
               Reject
             </button>
           )}
 
           <button
-            onClick={() => {
-              if (confirm('Permanently delete this post?')) act('delete', onDelete);
-            }}
+            onClick={() => onDeleteRequest(post)}
             disabled={loading === 'delete'}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
           >
@@ -148,6 +145,14 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [rejectingPost, setRejectingPost] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [rejectBusy, setRejectBusy] = useState(false);
+  const [approvingPost, setApprovingPost] = useState(null);
+  const [approveBusy, setApproveBusy] = useState(false);
+  const [deletingPost, setDeletingPost] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -188,10 +193,12 @@ export default function AdminDashboard() {
   const handleReject = async (postId, reason) => {
     try {
       await api.put(`/admin/posts/${postId}/reject`, { reason });
-      setPosts((prev) => prev.map((p) => p._id === postId ? { ...p, status: 'rejected' } : p));
+      setPosts((prev) => prev.map((p) => p._id === postId ? { ...p, status: 'rejected', rejectionReason: reason } : p));
       toast.success('Post rejected');
+      return true;
     } catch (_) {
-      toast.error('Failed to reject');
+      toast.error('Failed to reject. Feedback is required.');
+      return false;
     }
   };
 
@@ -205,11 +212,52 @@ export default function AdminDashboard() {
     }
   };
 
+  const confirmApprove = async () => {
+    if (!approvingPost) return;
+    setApproveBusy(true);
+    await handleApprove(approvingPost._id);
+    setApproveBusy(false);
+    setApprovingPost(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPost) return;
+    setDeleteBusy(true);
+    await handleDelete(deletingPost._id);
+    setDeleteBusy(false);
+    setDeletingPost(null);
+  };
+
   const tabs = [
     { key: 'pending', label: 'Pending Review', count: stats?.pendingPosts, dot: 'bg-amber-400' },
     { key: 'approved', label: 'Approved', count: stats?.approvedPosts, dot: 'bg-primary-500' },
     { key: 'rejected', label: 'Rejected', count: stats?.rejectedPosts, dot: 'bg-red-400' },
   ];
+
+  const openRejectModal = (post) => {
+    setRejectingPost(post);
+    setRejectReason('');
+    setRejectError('');
+  };
+
+  const closeRejectModal = () => {
+    if (rejectBusy) return;
+    setRejectingPost(null);
+    setRejectReason('');
+    setRejectError('');
+  };
+
+  const submitReject = async () => {
+    const trimmed = rejectReason.trim();
+    if (!trimmed) {
+      setRejectError('Please provide feedback before rejecting.');
+      return;
+    }
+    setRejectBusy(true);
+    const ok = await handleReject(rejectingPost._id, trimmed);
+    setRejectBusy(false);
+    if (ok) closeRejectModal();
+  };
 
   return (
     <div className="bg-neutral-50 min-h-screen py-8 px-4">
@@ -322,9 +370,9 @@ export default function AdminDashboard() {
                   <PostRow
                     key={post._id}
                     post={post}
-                    onApprove={() => handleApprove(post._id)}
-                    onReject={(reason) => handleReject(post._id, reason)}
-                    onDelete={() => handleDelete(post._id)}
+                    onApproveRequest={setApprovingPost}
+                    onReject={openRejectModal}
+                    onDeleteRequest={setDeletingPost}
                   />
                 ))}
               </div>
@@ -332,6 +380,112 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!approvingPost}
+        variant="approve"
+        title="Approve this report?"
+        description="This will make the report publicly visible on the platform. Review it carefully before approving."
+        postTitle={approvingPost?.title}
+        busy={approveBusy}
+        onConfirm={confirmApprove}
+        onClose={() => !approveBusy && setApprovingPost(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deletingPost}
+        variant="delete"
+        title="Permanently delete this post?"
+        description="This will remove the report and all its media from the platform. The author will not be notified."
+        postTitle={deletingPost?.title}
+        busy={deleteBusy}
+        onConfirm={confirmDelete}
+        onClose={() => !deleteBusy && setDeletingPost(null)}
+      />
+
+      <Transition appear show={!!rejectingPost} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={closeRejectModal}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-200"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-150"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title className="text-base font-semibold text-neutral-900">
+                    Provide rejection feedback
+                  </Dialog.Title>
+                  <Dialog.Description className="text-xs text-neutral-500 mt-1">
+                    This feedback will be visible to the user and helps them resubmit successfully.
+                  </Dialog.Description>
+                  {rejectingPost?.title && (
+                    <p className="text-xs text-neutral-500 mt-2">
+                      Post: <span className="font-medium text-neutral-800">{rejectingPost.title}</span>
+                    </p>
+                  )}
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
+                      Feedback
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={rejectReason}
+                      onChange={(e) => {
+                        setRejectReason(e.target.value);
+                        if (rejectError) setRejectError('');
+                      }}
+                      placeholder="Explain what needs to be fixed or clarified..."
+                      className="input resize-none"
+                      maxLength={600}
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-[11px] text-neutral-400">{rejectReason.length}/600</p>
+                      {rejectError && <p className="text-[11px] text-red-600">{rejectError}</p>}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closeRejectModal}
+                      disabled={rejectBusy}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={submitReject}
+                      disabled={rejectBusy}
+                      className="btn-primary"
+                    >
+                      {rejectBusy ? <LoadingSpinner size="sm" /> : 'Reject with feedback'}
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }
