@@ -189,11 +189,16 @@ exports.deletePost = async (req, res, next) => {
 // @access  Private
 exports.getMyPosts = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { status, page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const total = await Post.countDocuments({ author: req.user._id });
-    const posts = await Post.find({ author: req.user._id })
+    const filter = { author: req.user._id };
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+
+    const total = await Post.countDocuments(filter);
+    const posts = await Post.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));

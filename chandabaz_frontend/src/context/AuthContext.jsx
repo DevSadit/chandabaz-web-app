@@ -46,11 +46,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateName = async (name) => {
+    const { data } = await api.put('/users/me/name', { name });
+    setUser(data.user);
+    return data;
+  };
+
   const isAdmin = user?.role === 'admin';
   const isLoggedIn = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin, isLoggedIn }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateName, isAdmin, isLoggedIn }}>
       {children}
     </AuthContext.Provider>
   );

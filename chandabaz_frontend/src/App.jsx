@@ -8,6 +8,7 @@ import Register from './pages/Register';
 import Submit from './pages/Submit';
 import PostDetail from './pages/PostDetail';
 import AdminDashboard from './pages/AdminDashboard';
+import UserDashboard from './pages/UserDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -50,6 +51,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute adminOnly>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <UserDashboard />
               </ProtectedRoute>
             }
           />

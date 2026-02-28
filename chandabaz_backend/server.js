@@ -55,6 +55,7 @@ app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/users', require('./routes/users'));
 
 // Health check
 app.get('/api/health', (req, res) => {
