@@ -67,6 +67,9 @@ const postSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    // Receipt of Dishonesty
+    receiptId:  { type: String, default: null },   // CB-XXXXXX-YYYY — generated on approval
+    receiptUrl: { type: String, default: null },   // Cloudinary URL of the generated PDF
   },
   { timestamps: true }
 );

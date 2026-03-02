@@ -10,6 +10,7 @@ import Submit from './pages/Submit';
 import PostDetail from './pages/PostDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
+import VerifiedReports from './pages/VerifiedReports';
 import LoadingSpinner from './components/LoadingSpinner';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -47,6 +48,7 @@ const AppRoutes = () => {
             }
           />
           <Route path="/heatmap" element={<Heatmap />} />
+          <Route path="/reports" element={<VerifiedReports />} />
           <Route path="/post/:id" element={<PostDetail />} />
           <Route
             path="/submit"

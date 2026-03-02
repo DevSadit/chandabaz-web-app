@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Post = require('../models/Post');
 const User = require('../models/User');
 
@@ -70,6 +71,14 @@ exports.approvePost = async (req, res, next) => {
     post.approvedAt = new Date();
     post.approvedBy = req.user._id;
     post.rejectionReason = null;
+
+    // Generate a permanent, unique receipt ID on first approval
+    if (!post.receiptId) {
+      const hex  = crypto.randomBytes(3).toString('hex').toUpperCase();
+      const year = new Date().getFullYear();
+      post.receiptId = `CB-${hex}-${year}`;
+    }
+
     await post.save();
 
     res.json({ success: true, message: 'Post approved', data: post });

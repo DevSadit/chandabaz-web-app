@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python3:*)",
       "Bash(node -e \":*)",
-      "Bash(npm install react-leaflet@4.2.1 leaflet@1.9.4 --save)"
+      "Bash(npm install react-leaflet@4.2.1 leaflet@1.9.4 --save)",
+      "Bash(npm install jspdf html2canvas)",
+      "Bash(node --input-type=module --eval \":*)"
     ]
   }
 }

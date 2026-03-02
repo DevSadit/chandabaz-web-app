@@ -8,6 +8,7 @@ const {
   getMyPosts,
   getMyPost,
   updatePost,
+  uploadReceipt,
 } = require('../controllers/postController');
 const { protect, optionalAuth } = require('../middleware/auth');
 const handleUpload = require('../middleware/upload');
@@ -20,6 +21,7 @@ router.get('/:id', optionalAuth, getPost);
 
 // Private
 router.post('/', protect, handleUpload, createPost);
+router.post('/:id/receipt', protect, uploadReceipt);
 router.put('/:id', protect, handleUpload, updatePost);
 router.delete('/:id', protect, deletePost);
 

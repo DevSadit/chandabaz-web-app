@@ -1,4 +1,5 @@
 const Post = require('../models/Post');
+const { cloudinary } = require('../config/cloudinary');
 
 // Helper to detect media type from mimetype
 const getMediaType = (mimetype) => {
@@ -303,6 +304,52 @@ exports.updatePost = async (req, res, next) => {
     await post.populate('author', 'name avatar');
 
     res.json({ success: true, message: 'Post updated and resubmitted for review', data: post });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Upload the receipt PDF to Cloudinary and store the URL on the post
+// @route   POST /api/posts/:id/receipt
+// @access  Private (post owner or admin)
+exports.uploadReceipt = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    const isOwner = post.author.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (post.status !== 'approved') {
+      return res.status(400).json({ success: false, message: 'Post must be approved to upload a receipt' });
+    }
+
+    const { receiptData } = req.body;
+    if (!receiptData || !receiptData.includes('application/pdf')) {
+      return res.status(400).json({ success: false, message: 'Valid PDF data URI is required' });
+    }
+
+    // Upload (or overwrite) the PDF in Cloudinary under chandabaz/receipts
+    const result = await cloudinary.uploader.upload(receiptData, {
+      folder: 'chandabaz/receipts',
+      resource_type: 'raw',
+      public_id: `receipt-${post._id}`,
+      format: 'pdf',
+      overwrite: true,
+    });
+
+    post.receiptUrl = result.secure_url;
+    await post.save();
+
+    res.json({
+      success: true,
+      data: { receiptUrl: post.receiptUrl, receiptId: post.receiptId },
+    });
   } catch (error) {
     next(error);
   }

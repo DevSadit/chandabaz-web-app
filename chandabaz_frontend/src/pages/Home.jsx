@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Eye,
   Upload,
-  TrendingUp,
   FileCheck,
   Users,
   Lock,
@@ -22,16 +21,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import PostCard from "../components/PostCard";
-import FilterBar from "../components/FilterBar";
 import LoadingSpinner from "../components/LoadingSpinner";
-
-const INITIAL_FILTERS = {
-  search: "",
-  location: "",
-  mediaType: "",
-  startDate: "",
-  endDate: "",
-};
 
 /* ─── Inline styles ─── */
 const css = `
@@ -555,44 +545,15 @@ const STEPS = [
 export default function Home() {
   const { isLoggedIn } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const [page, setPage] = useState(1);
-
-  const fetchPosts = useCallback(async (cf, cp, append = false) => {
-    try {
-      const params = new URLSearchParams({ page: cp, limit: 12 });
-      if (cf.search) params.set("search", cf.search);
-      if (cf.location) params.set("location", cf.location);
-      if (cf.mediaType) params.set("mediaType", cf.mediaType);
-      if (cf.startDate) params.set("startDate", cf.startDate);
-      if (cf.endDate) params.set("endDate", cf.endDate);
-      const { data } = await api.get(`/posts?${params}`);
-      setPosts((prev) => (append ? [...prev, ...data.data] : data.data));
-      setPagination(data.pagination);
-    } catch (_) {
-      /* silently ignore */
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, []);
 
   useEffect(() => {
-    setLoading(true);
-    setPage(1);
-    fetchPosts(filters, 1, false);
-  }, [filters, fetchPosts]);
-
-  const handleLoadMore = () => {
-    const n = page + 1;
-    setPage(n);
-    setLoadingMore(true);
-    fetchPosts(filters, n, true);
-  };
-  const hasMore = pagination && pagination.page < pagination.pages;
+    api
+      .get("/posts?limit=4")
+      .then(({ data }) => setPosts(data.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="home-root">
@@ -1078,36 +1039,15 @@ export default function Home() {
               >
                 Verified Reports
               </h2>
-              {pagination && (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#7A8A82",
-                    margin: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <TrendingUp size={12} color="#019145" />
-                  {pagination.total} verified reports &middot; Latest first
-                </p>
-              )}
+              <p style={{ fontSize: 12, color: "#7A8A82", margin: 0 }}>
+                Latest approved reports from citizens across Bangladesh
+              </p>
             </div>
             {isLoggedIn && (
               <Link to="/submit" className="btn-submit">
                 <Upload size={14} /> Submit Report
               </Link>
             )}
-          </div>
-
-          {/* filters */}
-          <div style={{ marginBottom: 32 }}>
-            <FilterBar
-              filters={filters}
-              onChange={setFilters}
-              onClear={() => setFilters(INITIAL_FILTERS)}
-            />
           </div>
 
           {/* states */}
@@ -1159,7 +1099,7 @@ export default function Home() {
                     margin: "0 0 6px",
                   }}
                 >
-                  No reports found
+                  No reports yet
                 </h3>
                 <p
                   style={{
@@ -1169,28 +1109,20 @@ export default function Home() {
                     margin: 0,
                   }}
                 >
-                  {Object.values(filters).some(Boolean)
-                    ? "Try adjusting your search filters."
-                    : "Be the first to submit evidence of corruption."}
+                  Be the first to submit evidence of corruption.
                 </p>
               </div>
-              {isLoggedIn ? (
-                <Link
-                  to="/submit"
-                  className="btn-submit"
-                  style={{ marginTop: 8 }}
-                >
-                  <Upload size={14} /> Submit First Report
-                </Link>
-              ) : (
-                <Link
-                  to="/register"
-                  className="btn-submit"
-                  style={{ marginTop: 8 }}
-                >
-                  <ArrowRight size={14} /> Join &amp; Report
-                </Link>
-              )}
+              <Link
+                to={isLoggedIn ? "/submit" : "/register"}
+                className="btn-submit"
+                style={{ marginTop: 8 }}
+              >
+                {isLoggedIn ? (
+                  <><Upload size={14} /> Submit First Report</>
+                ) : (
+                  <><ArrowRight size={14} /> Join &amp; Report</>
+                )}
+              </Link>
             </div>
           ) : (
             <>
@@ -1199,31 +1131,17 @@ export default function Home() {
                   <PostCard key={post._id} post={post} />
                 ))}
               </div>
-              {hasMore && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginTop: 48,
-                  }}
-                >
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="load-more-btn"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <LoadingSpinner size="sm" /> Loading…
-                      </>
-                    ) : (
-                      <>
-                        Load More Reports <ChevronRight size={15} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 48,
+                }}
+              >
+                <Link to="/reports" className="load-more-btn">
+                  View All Reports <ChevronRight size={15} />
+                </Link>
+              </div>
             </>
           )}
         </div>

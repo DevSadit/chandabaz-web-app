@@ -16,20 +16,14 @@ connectDB();
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+// Rate limiting (skip auth routes so users/admins can retry login without restriction)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   message: { success: false, message: 'Too many requests, please try again later.' },
+  skip: (req) => req.path.startsWith('/auth'),
 });
 app.use('/api', limiter);
-
-// Stricter rate limit for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, message: 'Too many auth attempts, please try again later.' },
-});
 
 // CORS
 app.use(
@@ -51,7 +45,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Routes
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/admin', require('./routes/admin'));

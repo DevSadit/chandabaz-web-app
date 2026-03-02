@@ -298,7 +298,15 @@ export default function Navbar() {
                 `nb-navlink${isActive ? " active" : ""}`
               }
             >
-              Browse Reports
+              Home
+            </NavLink>
+            <NavLink
+              to="/reports"
+              className={({ isActive }) =>
+                `nb-navlink${isActive ? " active" : ""}`
+              }
+            >
+              Verified Reports
             </NavLink>
             <NavLink
               to="/heatmap"
@@ -422,7 +430,15 @@ export default function Navbar() {
                 `nb-m-link${isActive ? " active" : ""}`
               }
             >
-              Browse Reports
+              Home
+            </NavLink>
+            <NavLink
+              to="/reports"
+              className={({ isActive }) =>
+                `nb-m-link${isActive ? " active" : ""}`
+              }
+            >
+              Verified Reports
             </NavLink>
             <NavLink
               to="/heatmap"

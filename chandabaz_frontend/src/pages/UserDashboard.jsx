@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -11,6 +11,8 @@ import {
   Eye,
   User,
   Edit3,
+  FileDown,
+  ExternalLink,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import toast from "react-hot-toast";
@@ -18,6 +20,7 @@ import api from "../services/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
+import BribeReceipt, { downloadReceiptPDF } from "../components/BribeReceipt";
 
 /* ─── Styles ─── */
 const css = `
@@ -288,6 +291,13 @@ const css = `
     .ud-post-row { flex-direction: column; }
     .ud-post-thumb { width: 100%; height: 120px; }
   }
+
+  /* Receipt button */
+  .ud-btn-receipt {
+    background: rgba(180,120,0,0.07); border-color: rgba(180,120,0,0.24); color: #8B6914;
+  }
+  .ud-btn-receipt:hover { background: rgba(180,120,0,0.13); border-color: rgba(180,120,0,0.38); }
+  .ud-btn-receipt:disabled { opacity: 0.50; cursor: not-allowed; }
 `;
 
 /* ─── StatCard ─── */
@@ -306,7 +316,7 @@ function StatCard({ icon: Icon, label, value, bg, iconColor }) {
 }
 
 /* ─── PostRow ─── */
-function MyPostRow({ post, onDeleteRequest }) {
+function MyPostRow({ post, onDeleteRequest, onDownloadReceipt, generatingReceiptId }) {
   const thumb = post.media?.find((m) => m.type === "image");
   const statusClass =
     post.status === "pending"
@@ -379,6 +389,26 @@ function MyPostRow({ post, onDeleteRequest }) {
               <Eye size={11} /> Not public yet
             </span>
           )}
+          {post.status === "approved" && (
+            <button
+              onClick={() => onDownloadReceipt(post._id)}
+              disabled={generatingReceiptId === post._id}
+              className="ud-btn-action ud-btn-receipt"
+            >
+              <FileDown size={11} />
+              {generatingReceiptId === post._id ? "Generating…" : "Bribe Receipt"}
+            </button>
+          )}
+          {post.status === "approved" && post.receiptUrl && (
+            <a
+              href={post.receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ud-btn-action ud-btn-view"
+            >
+              <ExternalLink size={11} /> View Receipt
+            </a>
+          )}
           {post.status === "rejected" && (
             <Link
               to={`/post/${post._id}/edit`}
@@ -411,6 +441,12 @@ export default function UserDashboard() {
   const [savingName, setSavingName] = useState(false);
   const [deletingPost, setDeletingPost] = useState(null);
   const [deletebusy, setDeleteBusy] = useState(false);
+
+  // Receipt generation
+  const receiptRef = useRef(null);
+  const [receiptPost, setReceiptPost] = useState(null);
+  const [downloadTrigger, setDownloadTrigger] = useState(0);
+  const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
 
   useEffect(() => {
     if (user?.name) setName(user.name);
@@ -463,6 +499,35 @@ export default function UserDashboard() {
     setDeleteBusy(false);
     setDeletingPost(null);
   };
+
+  const handleReceiptDownload = async (postId) => {
+    setGeneratingReceiptId(postId);
+    try {
+      const { data } = await api.get(`/posts/${postId}`);
+      setReceiptPost(data.data);
+      setDownloadTrigger((t) => t + 1);
+    } catch {
+      toast.error("Failed to fetch report data");
+      setGeneratingReceiptId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!downloadTrigger || !receiptPost) return;
+    downloadReceiptPDF(receiptRef, receiptPost)
+      .then((receiptUrl) => {
+        toast.success("Receipt downloaded!");
+        if (receiptUrl) {
+          setPosts((prev) =>
+            prev.map((p) =>
+              p._id === receiptPost._id ? { ...p, receiptUrl } : p,
+            ),
+          );
+        }
+      })
+      .catch(() => toast.error("PDF generation failed"))
+      .finally(() => setGeneratingReceiptId(null));
+  }, [downloadTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNameSave = async (e) => {
     e.preventDefault();
@@ -659,6 +724,8 @@ export default function UserDashboard() {
                       key={post._id}
                       post={post}
                       onDeleteRequest={setDeletingPost}
+                      onDownloadReceipt={handleReceiptDownload}
+                      generatingReceiptId={generatingReceiptId}
                     />
                   ))}
                 </div>
@@ -678,6 +745,9 @@ export default function UserDashboard() {
         onConfirm={confirmDelete}
         onClose={() => !deletebusy && setDeletingPost(null)}
       />
+
+      {/* Off-screen receipt template — captured by html2canvas on demand */}
+      <BribeReceipt ref={receiptRef} post={receiptPost} />
     </div>
   );
 }
