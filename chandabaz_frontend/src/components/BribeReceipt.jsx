@@ -2,14 +2,14 @@ import { forwardRef } from "react";
 import { format } from "date-fns";
 
 /**
- * BribeReceipt — off-screen PDF template styled to mirror the ChandaBaz site UI.
- * Uses the exact same design tokens, card system, header pattern, and typography
- * as the live frontend. Captured by html2canvas → exported via jsPDF.
+ * BribeReceipt — redesigned PDF template.
+ * Professional, document-grade layout inspired by official government receipts,
+ * legal certificates, and banking documents. Clean serif typography,
+ * authoritative structure, high contrast, easy scanability.
  */
 const BribeReceipt = forwardRef(function BribeReceipt({ post }, ref) {
   if (!post) return null;
 
-  // Prefer the server-issued receiptId (set on approval); fall back to hash for legacy posts
   const receiptNo =
     post.receiptId || `CB-${(post._id || "").slice(-8).toUpperCase()}`;
   const issuedDate = format(new Date(), "dd MMMM yyyy");
@@ -24,30 +24,33 @@ const BribeReceipt = forwardRef(function BribeReceipt({ post }, ref) {
       ? post.description.slice(0, 290) + "…"
       : post.description || "";
 
-  // ── ChandaBaz design tokens (exact values from the live site) ────────────
+  // ── Design tokens ────────────────────────────────────────────────────────
   const C = {
-    dark: "#0A0F0D",
-    green: "#019145",
-    greenBg: "rgba(1,145,69,0.08)",
-    greenBd: "rgba(1,145,69,0.10)",
-    greenBdMd: "rgba(1,145,69,0.20)",
-    bg: "#F7F5F0",
-    card: "#fff",
-    headBg: "#FAFAF8",
-    textDk: "#0A0F0D",
-    textMd: "#3A4A42",
-    textMt: "#6B7B73",
-    textFt: "#9AA8A0",
-    amber: "#B45309",
-    amberBg: "rgba(180,83,9,0.06)",
-    amberBd: "rgba(180,83,9,0.18)",
-    serif: "'Playfair Display', Georgia, 'Times New Roman', serif",
-    sans: "'DM Sans', Arial, Helvetica, sans-serif",
+    ink: "#0D1117",
+    inkMid: "#374151",
+    inkLight: "#6B7280",
+    inkFaint: "#9CA3AF",
+    green: "#016B35",
+    greenMid: "#019145",
+    greenLight: "#D1FAE5",
+    greenBorder: "#A7F3D0",
+    page: "#FFFFFF",
+    offWhite: "#F9FAFB",
+    border: "#E5E7EB",
+    borderMid: "#D1D5DB",
+    red: "#B91C1C",
+    redLight: "#FEF2F2",
+    amber: "#92400E",
+    amberLight: "#FFFBEB",
+    amberBorder: "#FDE68A",
+    headerBg: "#0D1117",
+    serif: "'Georgia', 'Times New Roman', serif",
+    sans: "'Helvetica Neue', Helvetica, Arial, sans-serif",
     mono: '"Courier New", Courier, monospace',
   };
 
-  // ── All styles inline — required for html2canvas ─────────────────────────
   const S = {
+    // Off-screen wrapper
     wrap: {
       position: "absolute",
       left: "-9999px",
@@ -55,457 +58,467 @@ const BribeReceipt = forwardRef(function BribeReceipt({ post }, ref) {
       zIndex: -1,
       pointerEvents: "none",
     },
+
+    // Page
     page: {
       width: "794px",
-      background: C.bg,
+      minHeight: "1123px",
+      background: C.page,
       fontFamily: C.sans,
-      color: C.textDk,
+      color: C.ink,
       boxSizing: "border-box",
       position: "relative",
-      overflow: "hidden",
     },
-    watermark: {
-      position: "absolute",
-      top: "46%",
-      left: "50%",
-      transform: "translate(-50%, -50%) rotate(-28deg)",
-      width: "370px",
-      opacity: 0.035,
-      pointerEvents: "none",
-      zIndex: 0,
-    },
-    content: { position: "relative", zIndex: 1 },
 
-    /* ══ HEADER — mirrors ud-header ══ */
+    // ── TOP SECURITY BAND ──────────────────────────────────────────────────
+    securityBand: {
+      height: "6px",
+      background: `repeating-linear-gradient(
+        90deg,
+        ${C.green} 0px,
+        ${C.green} 20px,
+        ${C.greenMid} 20px,
+        ${C.greenMid} 40px,
+        #01A852 40px,
+        #01A852 60px
+      )`,
+    },
+
+    // ── HEADER ─────────────────────────────────────────────────────────────
     header: {
-      background: C.dark,
-      position: "relative",
-      overflow: "hidden",
-      borderBottom: "1px solid rgba(1,145,69,0.15)",
+      background: C.headerBg,
+      padding: "0",
     },
-    hTopLine: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      height: "1px",
-      background:
-        "linear-gradient(90deg, transparent, rgba(1,145,69,0.55), transparent)",
+    headerInner: {
+      display: "flex",
+      alignItems: "stretch",
+      minHeight: "100px",
     },
-    hGrid: {
-      position: "absolute",
-      inset: 0,
-      pointerEvents: "none",
-      backgroundImage:
-        "linear-gradient(rgba(1,145,69,0.04) 1px, transparent 1px)," +
-        "linear-gradient(90deg, rgba(1,145,69,0.04) 1px, transparent 1px)",
-      backgroundSize: "48px 48px",
+    headerGreenAccent: {
+      width: "6px",
+      background: C.greenMid,
+      flexShrink: 0,
     },
-    hGlow: {
-      position: "absolute",
-      top: "-60%",
-      right: "-5%",
-      width: "500px",
-      height: "400px",
-      background:
-        "radial-gradient(circle, rgba(1,145,69,0.14) 0%, transparent 65%)",
-      filter: "blur(60px)",
-      pointerEvents: "none",
-    },
-    hInner: {
-      padding: "22px 32px",
-      position: "relative",
-      zIndex: 2,
+    headerContent: {
+      flex: 1,
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      gap: "16px",
+      padding: "24px 36px",
     },
-    hLeft: { display: "flex", alignItems: "flex-start", gap: "14px" },
-    hIconBox: {
-      width: "44px",
-      height: "44px",
-      borderRadius: "2px",
-      background: C.green,
-      flexShrink: 0,
+    headerLeft: {
+      display: "flex",
+      alignItems: "center",
+      gap: "18px",
+    },
+    logoBox: {
+      width: "56px",
+      height: "56px",
+      background: C.greenMid,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      boxShadow: "0 4px 20px rgba(1,145,69,0.30)",
-      overflow: "hidden",
-    },
-    hLogo: { width: "34px", height: "34px", objectFit: "contain" },
-    hEyebrow: {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      marginBottom: "5px",
-    },
-    hEyebrowLine: {
-      width: "14px",
-      height: "1px",
-      background: C.green,
-      opacity: 0.4,
-    },
-    hEyebrowText: {
-      fontSize: "9px",
-      fontWeight: 700,
-      letterSpacing: "0.16em",
-      textTransform: "uppercase",
-      color: C.green,
-      fontFamily: C.sans,
-    },
-    hOrgName: {
-      fontFamily: C.serif,
-      fontSize: "22px",
-      fontWeight: 800,
-      color: "#fff",
-      letterSpacing: "-0.02em",
-      margin: "0 0 4px",
-    },
-    hOrgSub: {
-      fontSize: "12px",
-      color: "rgba(255,255,255,0.38)",
-      margin: 0,
-      fontFamily: C.sans,
-    },
-    hRight: { textAlign: "right" },
-    hGovtEye: {
-      display: "block",
-      fontSize: "8.5px",
-      fontWeight: 700,
-      color: "rgba(255,255,255,0.28)",
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      margin: "0 0 4px",
-      fontFamily: C.sans,
-    },
-    hGovtMain: {
-      display: "block",
-      fontSize: "12px",
-      fontWeight: 700,
-      color: "rgba(255,255,255,0.60)",
-      letterSpacing: "0.06em",
-      textTransform: "uppercase",
-      margin: "0 0 2px",
-      fontFamily: C.sans,
-    },
-    hGovtSub: {
-      display: "block",
-      fontSize: "8.5px",
-      color: "rgba(255,255,255,0.25)",
-      letterSpacing: "0.04em",
-      margin: 0,
-      fontFamily: C.sans,
-    },
-
-    /* ══ TITLE SECTION ══ */
-    titleSection: {
-      padding: "22px 32px 20px",
-      background: C.card,
-      borderBottom: `1px solid ${C.greenBd}`,
-    },
-    eyebrow: {
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      marginBottom: "8px",
-    },
-    eyebrowLine: {
-      width: "14px",
-      height: "1px",
-      background: C.green,
-      opacity: 0.4,
-    },
-    eyebrowText: {
-      fontSize: "9px",
-      fontWeight: 700,
-      letterSpacing: "0.16em",
-      textTransform: "uppercase",
-      color: C.green,
-      fontFamily: C.sans,
-    },
-    h1: {
-      fontFamily: C.serif,
-      fontSize: "30px",
-      fontWeight: 800,
-      color: C.textDk,
-      letterSpacing: "-0.02em",
-      lineHeight: 1.15,
-      margin: "0 0 5px",
-    },
-    h1Sub: { fontSize: "12px", color: C.textMt, fontFamily: C.sans, margin: 0 },
-
-    /* ══ STATS ROW — mirrors ud-stats ══ */
-    statsWrap: {
-      display: "grid",
-      gridTemplateColumns: "repeat(4, 1fr)",
-      gap: "12px",
-      padding: "16px 32px",
-      background: C.bg,
-    },
-    statCard: {
-      padding: "16px 16px",
-      background: C.card,
-      border: `1px solid ${C.greenBd}`,
-      borderRadius: "2px",
-      display: "flex",
-      alignItems: "flex-start",
-      gap: "12px",
-    },
-    statIconBox: {
-      width: "36px",
-      height: "36px",
-      borderRadius: "2px",
       flexShrink: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      borderRadius: "4px",
     },
-    statIconText: { fontSize: "14px", lineHeight: 1 },
-    statTexts: { display: "flex", flexDirection: "column", gap: "3px" },
-    statValue: {
-      fontFamily: C.serif,
-      fontSize: "14px",
-      fontWeight: 800,
-      color: C.textDk,
-      lineHeight: 1,
-      margin: 0,
-    },
-    statValueGreen: {
-      fontFamily: C.sans,
-      fontSize: "12px",
+    logoImg: { width: "42px", height: "42px", objectFit: "contain" },
+    orgBlock: {},
+    orgEyebrow: {
+      fontSize: "8px",
       fontWeight: 700,
-      color: C.green,
-      lineHeight: 1,
-      margin: 0,
+      letterSpacing: "0.2em",
+      textTransform: "uppercase",
+      color: C.greenMid,
+      fontFamily: C.sans,
+      marginBottom: "4px",
     },
-    statValueMono: {
-      fontFamily: C.mono,
+    orgName: {
+      fontFamily: C.serif,
+      fontSize: "26px",
+      fontWeight: 700,
+      color: "#FFFFFF",
+      margin: "0 0 3px",
+      letterSpacing: "-0.01em",
+    },
+    orgTagline: {
+      fontSize: "11px",
+      color: "rgba(255,255,255,0.45)",
+      margin: 0,
+      fontFamily: C.sans,
+    },
+    headerRight: {
+      textAlign: "right",
+    },
+    headerBadge: {
+      display: "inline-flex",
+      flexDirection: "column",
+      alignItems: "flex-end",
+      gap: "3px",
+    },
+    headerBadgeTop: {
       fontSize: "7.5px",
       fontWeight: 700,
-      color: C.textMd,
-      lineHeight: 1.35,
-      margin: 0,
-      wordBreak: "break-all",
-    },
-    statLabel: {
-      fontSize: "9px",
-      fontWeight: 700,
-      letterSpacing: "0.10em",
+      letterSpacing: "0.18em",
       textTransform: "uppercase",
-      color: C.textFt,
-      margin: 0,
+      color: "rgba(255,255,255,0.3)",
+      fontFamily: C.sans,
+    },
+    headerBadgeMid: {
+      fontSize: "13px",
+      fontWeight: 700,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      color: "rgba(255,255,255,0.65)",
+      fontFamily: C.sans,
+    },
+    headerBadgeBot: {
+      fontSize: "8px",
+      letterSpacing: "0.06em",
+      color: "rgba(255,255,255,0.25)",
       fontFamily: C.sans,
     },
 
-    /* ══ BODY ══ */
-    body: { padding: "16px 32px 0" },
-    card: {
-      background: C.card,
-      border: `1px solid ${C.greenBd}`,
-      borderRadius: "2px",
-      overflow: "hidden",
-      marginBottom: "14px",
+    // ── DOCUMENT TITLE STRIP ───────────────────────────────────────────────
+    titleStrip: {
+      borderBottom: `3px solid ${C.green}`,
+      padding: "20px 42px 18px",
+      display: "flex",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+      background: C.offWhite,
     },
-    cardHead: {
-      padding: "12px 20px",
-      borderBottom: `1px solid ${C.greenBd}`,
-      background: C.headBg,
+    titleLeft: {},
+    docType: {
+      fontSize: "8.5px",
+      fontWeight: 700,
+      letterSpacing: "0.22em",
+      textTransform: "uppercase",
+      color: C.green,
+      marginBottom: "5px",
+      fontFamily: C.sans,
+    },
+    docTitle: {
+      fontFamily: C.serif,
+      fontSize: "36px",
+      fontWeight: 700,
+      color: C.ink,
+      margin: "0 0 4px",
+      letterSpacing: "-0.02em",
+      lineHeight: 1,
+    },
+    docSubtitle: {
+      fontSize: "12px",
+      color: C.inkLight,
+      margin: 0,
+      fontFamily: C.sans,
+      fontStyle: "italic",
+    },
+    titleRight: {
+      textAlign: "right",
+      paddingBottom: "4px",
+    },
+    receiptNoLabel: {
+      fontSize: "8px",
+      fontWeight: 700,
+      letterSpacing: "0.18em",
+      textTransform: "uppercase",
+      color: C.inkFaint,
+      fontFamily: C.sans,
+      marginBottom: "4px",
+    },
+    receiptNoValue: {
+      fontFamily: C.mono,
+      fontSize: "20px",
+      fontWeight: 700,
+      color: C.ink,
+      letterSpacing: "0.06em",
+    },
+
+    // ── STATUS BAR ─────────────────────────────────────────────────────────
+    statusBar: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1px 1fr 1px 1fr 1px 1fr",
+      background: C.page,
+      borderBottom: `1px solid ${C.border}`,
+    },
+    statusDivider: {
+      background: C.border,
+      width: "1px",
+    },
+    statusCell: {
+      padding: "14px 20px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "4px",
+    },
+    statusLabel: {
+      fontSize: "7.5px",
+      fontWeight: 700,
+      letterSpacing: "0.18em",
+      textTransform: "uppercase",
+      color: C.inkFaint,
+      fontFamily: C.sans,
+    },
+    statusValue: {
+      fontSize: "13px",
+      fontWeight: 700,
+      color: C.ink,
+      fontFamily: C.sans,
+    },
+    statusValueGreen: {
+      fontSize: "13px",
+      fontWeight: 700,
+      color: C.green,
+      fontFamily: C.sans,
+      display: "flex",
+      alignItems: "center",
+      gap: "5px",
+    },
+    statusValueMono: {
+      fontFamily: C.mono,
+      fontSize: "9px",
+      fontWeight: 400,
+      color: C.inkMid,
+      lineHeight: 1.5,
+      wordBreak: "break-all",
+    },
+    statusDot: {
+      width: "7px",
+      height: "7px",
+      borderRadius: "50%",
+      background: C.greenMid,
+      flexShrink: 0,
+      display: "inline-block",
+    },
+
+    // ── BODY ───────────────────────────────────────────────────────────────
+    body: {
+      padding: "24px 42px",
+    },
+
+    // Section header
+    sectionLabel: {
+      fontSize: "8.5px",
+      fontWeight: 700,
+      letterSpacing: "0.2em",
+      textTransform: "uppercase",
+      color: C.inkLight,
+      fontFamily: C.sans,
+      margin: "0 0 10px",
       display: "flex",
       alignItems: "center",
       gap: "10px",
     },
-    cardHeadBar: {
-      width: "3px",
-      height: "18px",
-      borderRadius: "1px",
-      background: C.green,
-      flexShrink: 0,
+    sectionLabelLine: {
+      flex: 1,
+      height: "1px",
+      background: C.border,
     },
-    cardHeadTitle: {
-      fontSize: "12px",
-      fontWeight: 700,
-      color: C.textDk,
-      margin: 0,
-      fontFamily: C.sans,
+
+    // Details table
+    detailsTable: {
+      width: "100%",
+      borderCollapse: "collapse",
+      border: `1px solid ${C.border}`,
+      marginBottom: "22px",
+      fontSize: "12.5px",
     },
-    cardHeadSub: {
-      fontSize: "10px",
-      color: C.textFt,
-      margin: "1px 0 0",
-      fontFamily: C.sans,
-    },
-    table: { width: "100%", borderCollapse: "collapse" },
-    tdLabel: {
+    detailsTh: {
       padding: "10px 18px",
-      fontSize: "9px",
+      background: C.offWhite,
+      borderBottom: `1px solid ${C.border}`,
+      borderRight: `1px solid ${C.border}`,
+      fontSize: "8.5px",
       fontWeight: 700,
-      letterSpacing: "0.10em",
+      letterSpacing: "0.14em",
       textTransform: "uppercase",
-      color: C.textMd,
-      background: C.headBg,
-      borderBottom: `1px solid ${C.greenBd}`,
-      borderRight: `1px solid ${C.greenBd}`,
-      width: "32%",
+      color: C.inkMid,
+      verticalAlign: "top",
+      width: "30%",
+      fontFamily: C.sans,
+    },
+    detailsTd: {
+      padding: "10px 18px",
+      borderBottom: `1px solid ${C.border}`,
+      fontSize: "13px",
+      color: C.ink,
       verticalAlign: "top",
       fontFamily: C.sans,
     },
-    td: {
+    detailsTdGreen: {
       padding: "10px 18px",
-      fontSize: "12.5px",
-      color: C.textDk,
-      borderBottom: `1px solid ${C.greenBd}`,
-      verticalAlign: "top",
-      background: C.card,
-      fontFamily: C.sans,
-    },
-    tdGreen: {
-      padding: "10px 18px",
-      fontSize: "12.5px",
+      borderBottom: `1px solid ${C.border}`,
+      fontSize: "13px",
       fontWeight: 700,
       color: C.green,
-      borderBottom: `1px solid ${C.greenBd}`,
       verticalAlign: "top",
-      background: C.card,
       fontFamily: C.sans,
+      display: "flex",
+      alignItems: "center",
+      gap: "6px",
+    },
+
+    // Description box
+    descBox: {
+      border: `1px solid ${C.border}`,
+      borderLeft: `4px solid ${C.green}`,
+      padding: "16px 20px",
+      marginBottom: "22px",
+      background: C.offWhite,
     },
     descText: {
-      fontSize: "12.5px",
-      color: C.textMd,
-      lineHeight: 1.8,
+      fontSize: "13px",
+      color: C.inkMid,
+      lineHeight: 1.85,
       margin: 0,
-      padding: "16px 20px",
       fontFamily: C.sans,
     },
 
-    /* ══ SIGNATURE CARD ══ */
-    sigCard: {
-      background: C.card,
-      border: `1px solid ${C.greenBd}`,
-      borderRadius: "2px",
-      overflow: "hidden",
-      marginBottom: "14px",
+    // ── VERIFICATION SECTION ───────────────────────────────────────────────
+    verifyGrid: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "16px",
+      marginBottom: "22px",
     },
-    sigCardBody: {
+    verifyBox: {
+      border: `1px solid ${C.border}`,
+      padding: "18px 20px",
+    },
+    verifyBoxLabel: {
+      fontSize: "8px",
+      fontWeight: 700,
+      letterSpacing: "0.18em",
+      textTransform: "uppercase",
+      color: C.inkFaint,
+      fontFamily: C.sans,
+      marginBottom: "8px",
+    },
+    verifyPlatformName: {
+      fontFamily: C.serif,
+      fontSize: "16px",
+      fontWeight: 700,
+      color: C.ink,
+      marginBottom: "3px",
+    },
+    verifyPlatformRole: {
+      fontSize: "11px",
+      color: C.inkLight,
+      fontFamily: C.sans,
+    },
+    signatureLine: {
+      borderTop: `1px solid ${C.borderMid}`,
+      marginTop: "20px",
+      paddingTop: "8px",
+    },
+
+    // Stamp
+    stampWrap: {
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      padding: "20px 28px",
+      justifyContent: "center",
     },
     stamp: {
-      width: "106px",
-      height: "106px",
+      width: "108px",
+      height: "108px",
       borderRadius: "50%",
-      border: "3px solid rgba(220,38,38,0.58)",
+      border: `2.5px solid ${C.red}`,
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       textAlign: "center",
       padding: "10px",
-      transform: "rotate(-12deg)",
-      flexShrink: 0,
+      transform: "rotate(-14deg)",
     },
-    stampText: {
-      fontSize: "7.5px",
+    stampTopText: {
+      fontSize: "7px",
       fontWeight: 700,
-      color: "rgba(220,38,38,0.65)",
-      letterSpacing: "0.12em",
+      letterSpacing: "0.15em",
       textTransform: "uppercase",
-      lineHeight: 1.35,
+      color: C.red,
+      lineHeight: 1.3,
       fontFamily: C.sans,
     },
     stampMark: {
-      fontSize: "26px",
-      color: "rgba(220,38,38,0.65)",
-      lineHeight: 1,
-      margin: "3px 0",
+      fontSize: "28px",
+      color: C.red,
+      lineHeight: 1.1,
+      margin: "2px 0",
+    },
+    stampBotText: {
+      fontSize: "7px",
+      fontWeight: 700,
+      letterSpacing: "0.12em",
+      textTransform: "uppercase",
+      color: C.red,
+      lineHeight: 1.3,
+      fontFamily: C.sans,
     },
     stampDate: {
-      fontSize: "6.5px",
-      color: "rgba(220,38,38,0.42)",
+      fontSize: "6px",
+      color: `${C.red}99`,
       fontFamily: C.sans,
-      marginTop: "4px",
-    },
-    sigRight: { textAlign: "right" },
-    sigHint: {
-      fontSize: "9px",
-      color: C.textFt,
-      letterSpacing: "0.08em",
-      margin: "0 0 8px",
-      fontFamily: C.sans,
-    },
-    sigLine: {
-      width: "186px",
-      height: "1px",
-      background: C.greenBdMd,
-      marginLeft: "auto",
-      marginBottom: "6px",
-    },
-    sigName: {
-      fontSize: "11px",
-      fontWeight: 700,
-      color: C.textDk,
-      margin: "0 0 2px",
-      fontFamily: C.sans,
-    },
-    sigTitle: {
-      fontSize: "9px",
-      color: C.textMt,
-      letterSpacing: "0.05em",
-      margin: 0,
-      fontFamily: C.sans,
+      marginTop: "3px",
     },
 
-    /* ══ DISCLAIMER ══ */
+    // ── DISCLAIMER ─────────────────────────────────────────────────────────
     disclaimer: {
-      background: C.amberBg,
-      border: `1px solid ${C.amberBd}`,
-      borderRadius: "2px",
-      padding: "10px 16px",
+      background: C.amberLight,
+      border: `1px solid ${C.amberBorder}`,
+      padding: "12px 18px",
       display: "flex",
       alignItems: "flex-start",
-      gap: "10px",
-      margin: "0 32px 16px",
+      gap: "12px",
+      marginBottom: "0",
     },
     disclaimerIcon: {
-      fontSize: "13px",
-      color: C.amber,
-      flexShrink: 0,
+      fontSize: "14px",
       lineHeight: "1.6",
+      flexShrink: 0,
     },
     disclaimerText: {
-      fontSize: "10px",
+      fontSize: "10.5px",
       color: C.amber,
-      lineHeight: 1.65,
+      lineHeight: 1.7,
       margin: 0,
       fontFamily: C.sans,
     },
 
-    /* ══ FOOTER ══ */
+    // ── FOOTER ─────────────────────────────────────────────────────────────
+    footerBand: {
+      height: "4px",
+      background: C.green,
+      marginTop: "auto",
+    },
     footer: {
-      background: C.dark,
-      padding: "12px 32px",
+      background: C.offWhite,
+      borderTop: `1px solid ${C.border}`,
+      padding: "12px 42px",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      borderTop: "1px solid rgba(1,145,69,0.15)",
     },
     footerText: {
       fontSize: "9px",
-      color: "rgba(255,255,255,0.35)",
-      letterSpacing: "0.08em",
+      color: C.inkFaint,
+      letterSpacing: "0.1em",
       textTransform: "uppercase",
       fontFamily: C.sans,
     },
-    footerGreen: {
+    footerCenter: {
       fontSize: "9px",
       fontWeight: 700,
       color: C.green,
-      letterSpacing: "0.08em",
+      letterSpacing: "0.12em",
       textTransform: "uppercase",
       fontFamily: C.sans,
+    },
+    footerRight: {
+      fontSize: "9px",
+      color: C.inkFaint,
+      fontFamily: C.mono,
+      letterSpacing: "0.06em",
     },
   };
 
@@ -521,185 +534,168 @@ const BribeReceipt = forwardRef(function BribeReceipt({ post }, ref) {
   return (
     <div style={S.wrap}>
       <div ref={ref} style={S.page}>
-        {/* diagonal logo watermark */}
-        <img
-          src="/Chandabaz_logo.png"
-          alt=""
-          style={S.watermark}
-          crossOrigin="anonymous"
-        />
+        {/* ── TOP SECURITY BAND ── */}
+        <div style={S.securityBand} />
 
-        <div style={S.content}>
-          {/* ══ HEADER ══ */}
-          <div style={S.header}>
-            <div style={S.hTopLine} />
-            <div style={S.hGrid} />
-            <div style={S.hGlow} />
-            <div style={S.hInner}>
-              <div style={S.hLeft}>
-                <div style={S.hIconBox}>
+        {/* ── HEADER ── */}
+        <div style={S.header}>
+          <div style={S.headerInner}>
+            <div style={S.headerGreenAccent} />
+            <div style={S.headerContent}>
+              <div style={S.headerLeft}>
+                <div style={S.logoBox}>
                   <img
                     src="/Chandabaz_logo.png"
                     alt="ChandaBaz"
-                    style={S.hLogo}
+                    style={S.logoImg}
                     crossOrigin="anonymous"
                   />
                 </div>
-                <div>
-                  <div style={S.hEyebrow}>
-                    <div style={S.hEyebrowLine} />
-                    <span style={S.hEyebrowText}>Corruption Report</span>
-                    <div style={S.hEyebrowLine} />
+                <div style={S.orgBlock}>
+                  <div style={S.orgEyebrow}>
+                    Corruption Accountability Platform
                   </div>
-                  <p style={S.hOrgName}>ChandaBaz</p>
-                  <p style={S.hOrgSub}>
-                    Track your submissions and manage your account
+                  <p style={S.orgName}>ChandaBaz</p>
+                  <p style={S.orgTagline}>
+                    Protecting Democracy · Fighting Corruption
                   </p>
                 </div>
               </div>
-              <div style={S.hRight}>
-                <span style={S.hGovtEye}>✦ Republic of BANGLADESH ✦</span>
+              <div style={S.headerRight}>
+                <div style={S.headerBadge}>
+                  <span style={S.headerBadgeTop}>✦ Issued under ✦</span>
+                  <span style={S.headerBadgeMid}>Republic of Bangladesh</span>
+                  <span style={S.headerBadgeBot}>
+                    Citizen Accountability Initiative
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ══ TITLE ══ */}
-          <div style={S.titleSection}>
-            <div style={S.eyebrow}>
-              <div style={S.eyebrowLine} />
-              <span style={S.eyebrowText}>Official Document</span>
-              <div style={S.eyebrowLine} />
-            </div>
-            <h1 style={S.h1}>Receipt of Dishonesty</h1>
-            <p style={S.h1Sub}>
-              A satirical acknowledgement of a verified act of corruption
+        {/* ── TITLE STRIP ── */}
+        <div style={S.titleStrip}>
+          <div style={S.titleLeft}>
+            <div style={S.docType}>Official Satirical Document</div>
+            <h1 style={S.docTitle}>Receipt of Dishonesty</h1>
+            <p style={S.docSubtitle}>
+              A verified acknowledgement of a reported act of corruption
             </p>
           </div>
+          <div style={S.titleRight}>
+            <div style={S.receiptNoLabel}>Receipt No.</div>
+            <div style={S.receiptNoValue}>{receiptNo}</div>
+          </div>
+        </div>
 
-          {/* ══ STATS ROW ══ */}
-          <div style={S.statsWrap}>
-            <div style={S.statCard}>
-              <div style={{ ...S.statIconBox, background: C.greenBg }}>
-                <span style={{ ...S.statIconText, color: C.green }}>⊞</span>
+        {/* ── STATUS BAR ── */}
+        <div style={S.statusBar}>
+          <div style={S.statusCell}>
+            <span style={S.statusLabel}>Case Status</span>
+            <span style={S.statusValueGreen}>
+              <span style={S.statusDot} />
+              Verified
+            </span>
+          </div>
+          <div style={S.statusDivider} />
+          <div style={S.statusCell}>
+            <span style={S.statusLabel}>Date Issued</span>
+            <span style={S.statusValue}>{issuedDate}</span>
+          </div>
+          <div style={S.statusDivider} />
+          <div style={S.statusCell}>
+            <span style={S.statusLabel}>Incident Date</span>
+            <span style={S.statusValue}>{incidentDate}</span>
+          </div>
+          <div style={S.statusDivider} />
+          <div style={S.statusCell}>
+            <span style={S.statusLabel}>Report Ref</span>
+            <span style={S.statusValueMono}>{post._id}</span>
+          </div>
+        </div>
+
+        {/* ── BODY ── */}
+        <div style={S.body}>
+          {/* Transaction Particulars */}
+          <div style={S.sectionLabel}>
+            Transaction Particulars
+            <div style={S.sectionLabelLine} />
+          </div>
+          <table style={S.detailsTable}>
+            <tbody>
+              {tableRows.map(([label, value, isGreen], i) => (
+                <tr key={i}>
+                  <th style={S.detailsTh}>{label}</th>
+                  <td style={isGreen ? S.detailsTdGreen : S.detailsTd}>
+                    {isGreen && (
+                      <span style={{ color: S.detailsTdGreen.color }}>✓ </span>
+                    )}
+                    {value}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Description */}
+          <div style={S.sectionLabel}>
+            Description of Incident
+            <div style={S.sectionLabelLine} />
+          </div>
+          <div style={S.descBox}>
+            <p style={S.descText}>{desc}</p>
+          </div>
+
+          {/* Verification */}
+          <div style={S.sectionLabel}>
+            Verification &amp; Authorisation
+            <div style={S.sectionLabelLine} />
+          </div>
+          <div style={S.verifyGrid}>
+            {/* Authority block */}
+            <div style={S.verifyBox}>
+              <div style={S.verifyBoxLabel}>Authorised By</div>
+              <div style={S.verifyPlatformName}>
+                ChandaBaz Verification Engine
               </div>
-              <div style={S.statTexts}>
-                <p style={S.statValue}>{receiptNo}</p>
-                <p style={S.statLabel}>Receipt No.</p>
+              <div style={S.verifyPlatformRole}>
+                Anti-Corruption Accountability Bureau
               </div>
-            </div>
-            <div style={S.statCard}>
-              <div style={{ ...S.statIconBox, background: C.greenBg }}>
-                <span style={{ ...S.statIconText, color: C.green }}>✓</span>
-              </div>
-              <div style={S.statTexts}>
-                <p style={S.statValueGreen}>Verified</p>
-                <p style={S.statLabel}>Case Status</p>
-              </div>
-            </div>
-            <div style={S.statCard}>
-              <div
-                style={{
-                  ...S.statIconBox,
-                  background: "rgba(14,165,233,0.08)",
-                }}
-              >
-                <span
+              <div style={S.signatureLine}>
+                <div
                   style={{
-                    ...S.statIconText,
-                    color: "#0369A1",
-                    fontSize: "12px",
+                    fontSize: "9px",
+                    color: C.inkFaint,
+                    fontFamily: C.sans,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
                   }}
                 >
-                  ◷
-                </span>
-              </div>
-              <div style={S.statTexts}>
-                <p style={{ ...S.statValue, fontSize: "11px" }}>{issuedDate}</p>
-                <p style={S.statLabel}>Date Issued</p>
+                  Authorised Digital Signatory
+                </div>
               </div>
             </div>
-            <div style={S.statCard}>
-              <div style={{ ...S.statIconBox, background: "rgba(0,0,0,0.04)" }}>
-                <span
-                  style={{
-                    ...S.statIconText,
-                    color: C.textMt,
-                    fontSize: "11px",
-                    fontWeight: 700,
-                  }}
-                >
-                  #
-                </span>
-              </div>
-              <div style={S.statTexts}>
-                <p style={S.statValueMono}>{post._id}</p>
-                <p style={S.statLabel}>Report Ref</p>
+            {/* Stamp */}
+            <div
+              style={{
+                ...S.verifyBox,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#FAFAFA",
+              }}
+            >
+              <div style={S.stamp}>
+                <span style={S.stampTopText}>Certified{"\n"}By</span>
+                <span style={S.stampMark}>✓</span>
+                <span style={S.stampBotText}>ChandaBaz</span>
+                <span style={S.stampDate}>{issuedDate}</span>
               </div>
             </div>
           </div>
 
-          {/* ══ BODY ══ */}
-          <div style={S.body}>
-            {/* Transaction Particulars */}
-            <div style={S.card}>
-              <div style={S.cardHead}>
-                <div style={S.cardHeadBar} />
-                <div>
-                  <p style={S.cardHeadTitle}>Transaction Particulars</p>
-                  <p style={S.cardHeadSub}>Submitted incident details</p>
-                </div>
-              </div>
-              <table style={S.table}>
-                <tbody>
-                  {tableRows.map(([label, value, isGreen], i) => (
-                    <tr key={i}>
-                      <td style={S.tdLabel}>{label}</td>
-                      <td style={isGreen ? S.tdGreen : S.td}>{value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Description */}
-            <div style={S.card}>
-              <div style={S.cardHead}>
-                <div style={S.cardHeadBar} />
-                <div>
-                  <p style={S.cardHeadTitle}>Description of Incident</p>
-                  <p style={S.cardHeadSub}>Full incident description</p>
-                </div>
-              </div>
-              <p style={S.descText}>{desc}</p>
-            </div>
-
-            {/* Verification */}
-            <div style={S.sigCard}>
-              <div style={S.cardHead}>
-                <div style={S.cardHeadBar} />
-                <p style={S.cardHeadTitle}>Verification &amp; Authorisation</p>
-              </div>
-              <div style={S.sigCardBody}>
-                <div style={S.stamp}>
-                  <span style={S.stampText}>Certified</span>
-                  <span style={S.stampText}>By</span>
-                  <span style={S.stampMark}>✓</span>
-                  <span style={S.stampText}>ChandaBaz</span>
-                  <span style={S.stampDate}>{issuedDate}</span>
-                </div>
-                <div style={S.sigRight}>
-                  <p style={S.sigHint}>Authorised Digital Signatory</p>
-                  <div style={S.sigLine} />
-                  <p style={S.sigName}>ChandaBaz Verification Engine</p>
-                  <p style={S.sigTitle}>
-                    Anti-Corruption Accountability Bureau
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ══ DISCLAIMER ══ */}
+          {/* Disclaimer */}
           <div style={S.disclaimer}>
             <span style={S.disclaimerIcon}>⚠</span>
             <p style={S.disclaimerText}>
@@ -711,15 +707,16 @@ const BribeReceipt = forwardRef(function BribeReceipt({ post }, ref) {
               <strong>Receipt ID: {receiptNo}</strong>
             </p>
           </div>
+        </div>
 
-          {/* ══ FOOTER ══ */}
-          <div style={S.footer}>
-            <span style={S.footerText}>chandabaz</span>
-            <span style={S.footerGreen}>
-              Protecting Democracy · Fighting Corruption
-            </span>
-            <span style={S.footerText}>Est. 2026</span>
-          </div>
+        {/* ── FOOTER ── */}
+        <div style={S.footerBand} />
+        <div style={S.footer}>
+          <span style={S.footerText}>chandabaz.com</span>
+          <span style={S.footerCenter}>
+            Protecting Democracy · Fighting Corruption
+          </span>
+          <span style={S.footerRight}>Est. 2026</span>
         </div>
       </div>
     </div>
@@ -731,7 +728,6 @@ export default BribeReceipt;
 /**
  * Captures the BribeReceipt element, downloads the PDF locally, then uploads
  * the same PDF to Cloudinary via the backend and returns the stored URL.
- * The upload is best-effort — a failure still produces the local download.
  */
 export async function downloadReceiptPDF(ref, post) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -746,7 +742,7 @@ export async function downloadReceiptPDF(ref, post) {
     scale: 2,
     useCORS: true,
     allowTaint: false,
-    backgroundColor: "#F7F5F0",
+    backgroundColor: "#FFFFFF",
     logging: false,
   });
 
@@ -770,13 +766,9 @@ export async function downloadReceiptPDF(ref, post) {
     );
   }
 
-  // Grab the PDF data before triggering download so we can upload the same bytes
   const pdfDataUri = pdf.output("datauristring");
-
-  // ── 1. Trigger local download ──────────────────────────────────────────
   pdf.save(`receipt-of-dishonesty-${(post._id || "report").slice(-8)}.pdf`);
 
-  // ── 2. Upload to Cloudinary via backend (best-effort) ──────────────────
   let receiptUrl = post.receiptUrl || null;
   if (post._id && localStorage.getItem("cb_token")) {
     try {
@@ -786,9 +778,9 @@ export async function downloadReceiptPDF(ref, post) {
       });
       receiptUrl = data?.data?.receiptUrl || null;
     } catch {
-      // Upload failed — local download already succeeded, so silently ignore
+      // Upload failed — local download already succeeded
     }
   }
 
-  return receiptUrl; // callers can update their local post state
+  return receiptUrl;
 }
