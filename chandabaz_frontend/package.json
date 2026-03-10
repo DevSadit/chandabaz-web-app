@@ -23,7 +23,7 @@
     "react-router-dom": "^6.20.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
