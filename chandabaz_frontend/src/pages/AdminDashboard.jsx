@@ -1,8 +1,8 @@
-import { Fragment, useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import {
   CheckCircle, XCircle, Trash2, Eye, Users, FileText,
   Clock, RefreshCw, MapPin, User, UserX, ShieldCheck,
-  TrendingUp, AlertCircle,
+  TrendingUp, AlertCircle, FileDown,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { Dialog, Transition } from '@headlessui/react';
+import BribeReceipt, { downloadReceiptPDF } from '../components/BribeReceipt';
 
 function StatCard({ icon: Icon, label, value, bg, iconColor, trend }) {
   return (
@@ -32,7 +33,7 @@ function StatCard({ icon: Icon, label, value, bg, iconColor, trend }) {
   );
 }
 
-function PostRow({ post, onApproveRequest, onReject, onDeleteRequest }) {
+function PostRow({ post, onApproveRequest, onReject, onDeleteRequest, onDownloadReceipt, generatingReceiptId }) {
   const [loading, setLoading] = useState('');
 
   const act = async (key, fn) => {
@@ -103,6 +104,17 @@ function PostRow({ post, onApproveRequest, onReject, onDeleteRequest }) {
             <Eye size={12} /> View
           </Link>
 
+          {post.status === 'approved' && (
+            <button
+              onClick={() => onDownloadReceipt(post._id)}
+              disabled={generatingReceiptId === post._id}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+            >
+              <FileDown size={12} />
+              {generatingReceiptId === post._id ? 'Generating…' : 'Bribe Receipt'}
+            </button>
+          )}
+
           {post.status !== 'approved' && (
             <button
               onClick={() => onApproveRequest(post)}
@@ -153,6 +165,12 @@ export default function AdminDashboard() {
   const [approveBusy, setApproveBusy] = useState(false);
   const [deletingPost, setDeletingPost] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Receipt generation
+  const receiptRef = useRef(null);
+  const [receiptPost, setReceiptPost] = useState(null);
+  const [downloadTrigger, setDownloadTrigger] = useState(0);
+  const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -227,6 +245,26 @@ export default function AdminDashboard() {
     setDeleteBusy(false);
     setDeletingPost(null);
   };
+
+  const handleReceiptDownload = async (postId) => {
+    setGeneratingReceiptId(postId);
+    try {
+      const { data } = await api.get(`/posts/${postId}`);
+      setReceiptPost(data.data);
+      setDownloadTrigger((t) => t + 1);
+    } catch {
+      toast.error('Failed to fetch report data');
+      setGeneratingReceiptId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!downloadTrigger || !receiptPost) return;
+    downloadReceiptPDF(receiptRef, receiptPost)
+      .then(() => toast.success('Receipt downloaded!'))
+      .catch(() => toast.error('PDF generation failed'))
+      .finally(() => setGeneratingReceiptId(null));
+  }, [downloadTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs = [
     { key: 'pending', label: 'Pending Review', count: stats?.pendingPosts, dot: 'bg-amber-400' },
@@ -373,6 +411,8 @@ export default function AdminDashboard() {
                     onApproveRequest={setApprovingPost}
                     onReject={openRejectModal}
                     onDeleteRequest={setDeletingPost}
+                    onDownloadReceipt={handleReceiptDownload}
+                    generatingReceiptId={generatingReceiptId}
                   />
                 ))}
               </div>
@@ -402,6 +442,9 @@ export default function AdminDashboard() {
         onConfirm={confirmDelete}
         onClose={() => !deleteBusy && setDeletingPost(null)}
       />
+
+      {/* Off-screen receipt template — captured by html2canvas on demand */}
+      <BribeReceipt ref={receiptRef} post={receiptPost} />
 
       <Transition appear show={!!rejectingPost} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={closeRejectModal}>

@@ -13,11 +13,12 @@ import UserDashboard from './pages/UserDashboard';
 import VerifiedReports from './pages/VerifiedReports';
 import LoadingSpinner from './components/LoadingSpinner';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, redirectAdminTo = null }) => {
   const { user, loading, isLoggedIn, isAdmin } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen"><LoadingSpinner size="lg" /></div>;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+  if (redirectAdminTo && isAdmin) return <Navigate to={redirectAdminTo} replace />;
   return children;
 };
 
@@ -69,7 +70,7 @@ const AppRoutes = () => {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute redirectAdminTo="/admin">
                 <UserDashboard />
               </ProtectedRoute>
             }

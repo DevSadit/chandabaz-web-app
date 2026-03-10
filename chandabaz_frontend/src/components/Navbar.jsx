@@ -317,7 +317,7 @@ export default function Navbar() {
               <Flame size={12} />
               Heatmap
             </NavLink>
-            {isLoggedIn && (
+            {isLoggedIn && !isAdmin && (
               <NavLink
                 to="/dashboard"
                 className={({ isActive }) =>
@@ -365,9 +365,11 @@ export default function Navbar() {
                     </p>
                   </div>
 
-                  <Link to="/dashboard" className="nb-dropdown-item">
-                    <LayoutDashboard size={13} /> My Dashboard
-                  </Link>
+                  {!isAdmin && (
+                    <Link to="/dashboard" className="nb-dropdown-item">
+                      <LayoutDashboard size={13} /> My Dashboard
+                    </Link>
+                  )}
                   {isAdmin && (
                     <Link to="/admin" className="nb-dropdown-item">
                       <LayoutDashboard size={13} /> Admin Dashboard
@@ -449,7 +451,7 @@ export default function Navbar() {
               <Flame size={14} />
               Heatmap
             </NavLink>
-            {isLoggedIn && (
+            {isLoggedIn && !isAdmin && (
               <NavLink
                 to="/dashboard"
                 className={({ isActive }) =>
