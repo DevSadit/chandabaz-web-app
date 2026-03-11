@@ -180,6 +180,26 @@ const cardCss = `
   }
 `;
 
+const STYLE_ID = "postcard-styles";
+
+const ensurePostCardStyles = () => {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = cardCss;
+  document.head.appendChild(style);
+};
+
+const buildThumbUrl = (url) => {
+  if (!url) return url;
+  const marker = "/upload/";
+  const index = url.indexOf(marker);
+  if (index === -1) return url;
+  return `${url.slice(0, index + marker.length)}q_auto,f_auto,w_720/${url.slice(index + marker.length)}`;
+};
+
 const mediaMeta = {
   image: { icon: Image, chipCls: "pc-chip-image", label: "Image" },
   video: { icon: Video, chipCls: "pc-chip-video", label: "Video" },
@@ -206,19 +226,21 @@ function MediaChips({ media }) {
 }
 
 export default function PostCard({ post }) {
+  ensurePostCardStyles();
+
   const firstImage = post.media?.find((m) => m.type === "image");
   const hasVideo = post.media?.some((m) => m.type === "video");
   const isPdf = post.media?.[0]?.type === "pdf";
+  const thumbUrl = firstImage ? buildThumbUrl(firstImage.url) : null;
 
   return (
     <div className="pc-root">
-      <style>{cardCss}</style>
       <Link to={`/post/${post._id}`} className="pc-card">
         {/* ── Thumbnail ── */}
         <div className="pc-thumb">
-          {firstImage ? (
+          {thumbUrl ? (
             <>
-              <img src={firstImage.url} alt={post.title} loading="lazy" />
+              <img src={thumbUrl} alt={post.title} loading="lazy" decoding="async" />
               <div className="pc-thumb-overlay" />
             </>
           ) : (

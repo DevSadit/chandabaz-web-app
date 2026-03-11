@@ -112,15 +112,21 @@ exports.getPosts = async (req, res, next) => {
       if (endDate) filter.incidentDate.$lte = new Date(endDate);
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Post.countDocuments(filter);
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 12, 1), 100);
+    const skip = (pageNum - 1) * limitNum;
+    const projection = 'title description location incidentDate media isAnonymous author status viewCount tags createdAt';
 
-    const posts = await Post.find(filter)
-      .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('author', 'name avatar')
-      .lean();
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(filter),
+      Post.find(filter)
+        .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .select(projection)
+        .populate('author', 'name avatar')
+        .lean(),
+    ]);
 
     // Strip author details for anonymous posts
     const safePosts = posts.map((p) => ({
@@ -133,9 +139,9 @@ exports.getPosts = async (req, res, next) => {
       data: safePosts,
       pagination: {
         total,
-        page: parseInt(page),
-        pages: Math.ceil(total / parseInt(limit)),
-        limit: parseInt(limit),
+        page: pageNum,
+        pages: Math.ceil(total / limitNum),
+        limit: limitNum,
       },
     });
   } catch (error) {

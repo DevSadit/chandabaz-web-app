@@ -77,6 +77,8 @@ const postSchema = new mongoose.Schema(
 // Text index for search
 postSchema.index({ title: 'text', description: 'text', location: 'text', tags: 'text' });
 postSchema.index({ status: 1, createdAt: -1 });
+postSchema.index({ status: 1, incidentDate: -1 });
+postSchema.index({ status: 1, 'media.type': 1, createdAt: -1 });
 postSchema.index({ location: 1 });
 postSchema.index({ author: 1 });
 

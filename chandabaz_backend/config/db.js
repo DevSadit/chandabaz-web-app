@@ -14,8 +14,16 @@ const connectDB = async () => {
       );
     }
 
-    const conn = await mongoose.connect(mongoUri);
+    const conn = await mongoose.connect(mongoUri, {
+      autoIndex: process.env.MONGO_AUTOINDEX === 'true',
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+
+    if (process.env.SYNC_INDEXES === 'true') {
+      const Post = require('../models/Post');
+      await Post.syncIndexes();
+      console.log('MongoDB indexes synced for Post model.');
+    }
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
     process.exit(1);

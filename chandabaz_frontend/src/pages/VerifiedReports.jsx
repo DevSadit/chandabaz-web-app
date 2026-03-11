@@ -147,7 +147,7 @@ export default function VerifiedReports() {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [page, setPage] = useState(1);
 
-  const fetchPosts = useCallback(async (cf, cp, append = false) => {
+  const fetchPosts = useCallback(async (cf, cp, append = false, signal) => {
     try {
       const params = new URLSearchParams({ page: cp, limit: 12 });
       if (cf.search) params.set("search", cf.search);
@@ -155,7 +155,7 @@ export default function VerifiedReports() {
       if (cf.mediaType) params.set("mediaType", cf.mediaType);
       if (cf.startDate) params.set("startDate", cf.startDate);
       if (cf.endDate) params.set("endDate", cf.endDate);
-      const { data } = await api.get(`/posts?${params}`);
+      const { data } = await api.get(`/posts?${params}`, { signal });
       setPosts((prev) => (append ? [...prev, ...data.data] : data.data));
       setPagination(data.pagination);
     } catch (_) {
@@ -169,7 +169,16 @@ export default function VerifiedReports() {
   useEffect(() => {
     setLoading(true);
     setPage(1);
-    fetchPosts(filters, 1, false);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchPosts(filters, 1, false, controller.signal);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [filters, fetchPosts]);
 
   const handleLoadMore = () => {
