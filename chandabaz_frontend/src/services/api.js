@@ -1,13 +1,15 @@
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  headers: { 'Content-Type': 'application/json' },
+  baseURL:
+    import.meta.env.VITE_API_URL ||
+    "https://chandabaz-web-app.onrender.com/api",
+  headers: { "Content-Type": "application/json" },
 });
 
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cb_token');
+  const token = localStorage.getItem("cb_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -19,11 +21,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('cb_token');
+      localStorage.removeItem("cb_token");
       // Let each component handle redirect instead of forcing navigation here
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

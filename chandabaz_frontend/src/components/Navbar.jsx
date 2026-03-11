@@ -358,23 +358,23 @@ export default function Navbar() {
                   </button>
 
                   <div className="nb-dropdown">
-                  <div className="nb-dropdown-header">
-                    <p className="nb-dropdown-name">{user?.name}</p>
-                    <p className="nb-dropdown-sub">
-                      {user?.email || user?.phone}
-                    </p>
-                  </div>
+                    <div className="nb-dropdown-header">
+                      <p className="nb-dropdown-name">{user?.name}</p>
+                      <p className="nb-dropdown-sub">
+                        {user?.email || user?.phone}
+                      </p>
+                    </div>
 
-                  {!isAdmin && (
-                    <Link to="/dashboard" className="nb-dropdown-item">
-                      <LayoutDashboard size={13} /> My Dashboard
-                    </Link>
-                  )}
-                  {isAdmin && (
-                    <Link to="/admin" className="nb-dropdown-item">
-                      <LayoutDashboard size={13} /> Admin Dashboard
-                    </Link>
-                  )}
+                    {!isAdmin && (
+                      <Link to="/dashboard" className="nb-dropdown-item">
+                        <LayoutDashboard size={13} /> My Dashboard
+                      </Link>
+                    )}
+                    {isAdmin && (
+                      <Link to="/admin" className="nb-dropdown-item">
+                        <LayoutDashboard size={13} /> Admin Dashboard
+                      </Link>
+                    )}
                     <div className="nb-dropdown-divider" />
                     <button
                       onClick={handleLogout}

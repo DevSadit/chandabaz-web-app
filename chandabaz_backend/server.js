@@ -31,9 +31,38 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 // CORS
+const normalizeOrigin = (origin) => origin?.replace(/\/$/, "");
+const envOriginSources = [
+  process.env.CLIENT_URL,
+  process.env.CLIENT_URLS,
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_LIVE,
+  process.env.frontend_live,
+]
+  .filter(Boolean)
+  .join(",");
+const allowedOrigins = Array.from(
+  new Set(
+    [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      ...envOriginSources.split(","),
+    ]
+      .map((origin) => normalizeOrigin(origin?.trim()))
+      .filter(Boolean),
+  ),
+);
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
