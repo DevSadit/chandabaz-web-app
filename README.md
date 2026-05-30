@@ -2,6 +2,10 @@
 
 > _"Exposing corruption through verified public evidence."_
 
+<p align="center">
+  <img src="./chandabaz_frontend/public/chandabaz_banner.png" alt="ChandaBaz Hero Section" width="100%">
+</p>
+
 ChandaBaz is a web platform where people can report corruption happening around them. You can upload photos, videos, and documents as proof. Every report goes through an admin review before it becomes public, so only real, verified reports are shown on the site. You can also report anonymously if you don't want to show your name.
 
 ---
